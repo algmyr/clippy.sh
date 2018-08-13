@@ -42,13 +42,12 @@ EOF
 }
 
 not_unique() {
-    echo "Error: no unique match"
-    echo
-    usage
+    echo "No unique match, potential matches:"
+    echo "$match"
 }
 
 function no_match() {
-    echo "Error: no match"
+    echo "No matching action"
     echo
     usage
 }
