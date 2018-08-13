@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+# Scipt Name: clippy
+# Requires: xclip, maim (optional)
+#
+# A simple clipboard helper script. Makes it easy to list what
+# is stored in your clipboards and allows reading from/writing to
+# specific targets on the clipboards.
+#
+# On top of that some quality of life features are included for
+# capturing screen to a clipboard.
+#
+
+clippy="${0##*/}"
+poss_actions='list\nget\nset\nregion_capture\nscreen_capture'
+
+# Help
+usage() {
+    echo "Usage: $clippy [-bps] $(echo $poss_actions | sed 's_\\n_/_g') [target]"
+}
+
+help() {
+    usage
+    cat << EOF
+
+Options:
+  -b                use clipboard [default]
+  -p                use primary selection
+  -s                use secondary selection
+
+Actions:
+  list              lists all available targets
+  get               get content from selection
+  set               set content to selection
+
+  region_capture    capture screen region to selection
+  screen_capture    capture screen to selection
+
+Target:
+  defaults to TEXT
+EOF
+}
+
+not_unique() {
+    echo "Error: no unique match"
+    echo
+    usage
+}
+
+function no_match() {
+    echo "Error: no match"
+    echo
+    usage
+}
+
+function parseargs() {
+    if [[ "$@" == "" ]]; then
+        usage
+        exit 0
+    fi
+
+    # Which clipboard
+    clip=clipboard
+    case "$1" in
+    "-b")
+        clip=clipboard
+        shift
+        ;;
+    "-p")
+        clip=primary
+        shift
+        ;;
+    "-s")
+        clip=secondary
+        shift
+        ;;
+    "-h"|"--help")
+        help
+        exit 0
+        ;;
+    esac
+
+    # Action (pick action if unique prefix)
+    match=$(echo -e "$poss_actions" | grep "^$1")
+
+    n_match=$(echo $match | wc -w)
+    if (( n_match == 0 )); then
+        action=no_match
+    elif (( n_match == 1 )); then
+        action=$match
+    else
+        action=not_unique
+    fi
+
+    # Target (default to text)
+    if [[ "$2" == "" ]]; then
+        target="TEXT"
+    else
+        target="$2"
+    fi
+
+}
+
+parseargs $@
+
+cmd="xclip -selection $clip"
+
+list() { $cmd -t TARGETS -o; }
+get() { $cmd -t "$target" -o; }
+set() { $cmd -t "$target" -i; }
+region_capture() { maim -s | $cmd -t image/png -i; }
+screen_capture() { maim | $cmd -t image/png -i; }
+
+$action
